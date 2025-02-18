@@ -32,13 +32,13 @@ function extractNewsItems($) {
     return newsItems;
 }
 
-async function fetchNewsItemDetails(href) {
+async function fetchNewsItemDetails(href, title) {
     const pageHtml = await fetchPage(href);
     const $ = parseHTML(pageHtml);
     const dateNode = $("time.entry-date.updated.td-module-date");
     const publishedAt = dateNode.attr('datetime') || null;
     const article = $("div.td_block_wrap.tdb_single_content.tdi_102.td-pb-border-top.td_block_template_1.td-post-content.tagdiv-type div.tdb-block-inner.td-fix-index");
-    const paragraphs = [];
+    const paragraphs = [`# ${title}`];
 
     article.find('p, figure').each((index, element) => {
         const $element = $(element);
@@ -72,6 +72,7 @@ async function fetchNewsItemDetails(href) {
 
     return {
         publishedAt,
+        summary: paragraphs.length > 1 ? paragraphs[1] : '',
         markdownContent: paragraphs.join('\n\n')
     };
 }
@@ -82,13 +83,14 @@ async function main() {
         const $ = parseHTML(html);
         const newsItems = extractNewsItems($);
         const promises = newsItems.map(async item => {
-            const details = await fetchNewsItemDetails(item.href);
+            const details = await fetchNewsItemDetails(item.href, item.title);
             return {
                 title: item.title,
                 url: item.href,
                 thumbnail: item.dataImgUrl,
                 published_at: details.publishedAt,
-                paragraphs: details.markdownContent
+                content: details.markdownContent,
+                summary: details.summary
             };
         });
 
